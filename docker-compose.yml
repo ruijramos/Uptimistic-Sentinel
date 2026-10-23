@@ -1,0 +1,70 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sentinel-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sentinel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinel_secure_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-uptimistic_sentinel}
+    volumes:
+      - sentinel_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sentinel} -d ${POSTGRES_DB:-uptimistic_sentinel}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sentinel-web-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-sentinel}:${POSTGRES_PASSWORD:-sentinel_secure_pass}@db:5432/${POSTGRES_DB:-uptimistic_sentinel}
+    command: >
+      sh -c "alembic upgrade head && gunicorn -w 4 -b 0.0.0.0:5000 --access-logfile - --error-logfile - wsgi:app"
+    expose:
+      - "5000"
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sentinel-worker
+    restart: unless-stopped
+    cap_add:
+      - NET_RAW
+    depends_on:
+      db:
+        condition: service_healthy
+      web:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-sentinel}:${POSTGRES_PASSWORD:-sentinel_secure_pass}@db:5432/${POSTGRES_DB:-uptimistic_sentinel}
+    command: python worker.py
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sentinel-frontend
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "8080:80"
+
+volumes:
+  sentinel_pgdata:
+    driver: local

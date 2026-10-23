@@ -1,0 +1,769 @@
+import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { TargetStateService } from '../../core/services/target-state.service';
+import { Target } from '../../core/models/target.model';
+import { SparklineChartComponent } from '../../shared/components/sparkline-chart/sparkline-chart.component';
+import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { TargetFormComponent } from '../target-form/target-form.component';
+import { SettingsModalComponent } from '../settings/settings-modal.component';
+import { TargetDetailModalComponent } from '../target-detail/target-detail-modal.component';
+
+@Component({
+  selector: 'app-dashboard',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    SparklineChartComponent,
+    StatusBadgeComponent,
+    TargetFormComponent,
+    SettingsModalComponent,
+    TargetDetailModalComponent
+  ],
+  template: `
+    <div class="dashboard-layout">
+      <!-- Top Navigation Bar -->
+      <header class="top-nav glass-panel">
+        <div class="nav-brand">
+          <div class="brand-logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L3 7V13C3 18.5 7 21.6 12 22C17 21.6 21 18.5 21 13V7L12 2Z" fill="url(#brandGrad)" />
+              <path d="M9 12L11 14L15 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <defs>
+                <linearGradient id="brandGrad" x1="3" y1="2" x2="21" y2="22" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#6366F1"/>
+                  <stop offset="1" stop-color="#4F46E5"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <div>
+            <h1 class="brand-title">UPTIMISTIC SENTINEL</h1>
+            <span class="brand-subtitle">Self-Hosted Infrastructure Monitor</span>
+          </div>
+        </div>
+
+        <div class="nav-actions">
+          <div class="sync-status">
+            <span class="sync-dot"></span>
+            <span>Live auto-poll</span>
+          </div>
+
+          <button
+            type="button"
+            class="btn btn-secondary"
+            id="btn-open-settings"
+            (click)="isSettingsModalOpen.set(true)"
+          >
+            ⚙ Settings
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-primary"
+            id="btn-open-add-target"
+            (click)="openAddModal()"
+          >
+            + Add Target
+          </button>
+        </div>
+      </header>
+
+      <!-- Metric Cards Grid -->
+      <section class="metrics-grid">
+        <!-- Card 1: Total Monitored -->
+        <div class="metric-card glass-panel" id="metric-total">
+          <div class="metric-header">
+            <span class="metric-label">Monitored Targets</span>
+            <span class="metric-icon">🎯</span>
+          </div>
+          <div class="metric-body">
+            <span class="metric-number">{{ state.totalCount() }}</span>
+            <span class="metric-subtext">{{ state.pausedCount() }} paused</span>
+          </div>
+        </div>
+
+        <!-- Card 2: Operational (UP) -->
+        <div class="metric-card glass-panel card-up" id="metric-up">
+          <div class="metric-header">
+            <span class="metric-label">Operational (UP)</span>
+            <span class="indicator-dot up"></span>
+          </div>
+          <div class="metric-body">
+            <span class="metric-number text-success">{{ state.upCount() }}</span>
+            <span class="metric-subtext">Healthy services</span>
+          </div>
+        </div>
+
+        <!-- Card 3: Failing / Outages (DOWN) -->
+        <div class="metric-card glass-panel card-down" id="metric-down">
+          <div class="metric-header">
+            <span class="metric-label">Outages & Debounce</span>
+            <span class="indicator-dot down"></span>
+          </div>
+          <div class="metric-body">
+            <span class="metric-number" [class.text-danger]="state.downCount() > 0" [class.text-muted]="state.downCount() === 0">
+              {{ state.downCount() }}
+            </span>
+            <span class="metric-subtext">
+              @if (state.pendingCount() > 0) {
+                <span class="text-warning">{{ state.pendingCount() }} failing (debouncing)</span>
+              } @else {
+                Zero active alerts
+              }
+            </span>
+          </div>
+        </div>
+
+        <!-- Card 4: 24h Average Uptime -->
+        <div class="metric-card glass-panel" id="metric-uptime">
+          <div class="metric-header">
+            <span class="metric-label">24h Fleet Uptime</span>
+            <span class="metric-icon">📊</span>
+          </div>
+          <div class="metric-body">
+            <span class="metric-number text-success">{{ state.overallUptimePct() }}%</span>
+            <span class="metric-subtext">Rolling 24-hour baseline</span>
+          </div>
+        </div>
+
+        <!-- Card 5: Fleet Average Latency -->
+        <div class="metric-card glass-panel" id="metric-latency">
+          <div class="metric-header">
+            <span class="metric-label">Average Latency</span>
+            <span class="metric-icon">⚡</span>
+          </div>
+          <div class="metric-body">
+            <span class="metric-number">{{ state.avgLatencyMs() }} <small class="unit">ms</small></span>
+            <span class="metric-subtext">Across active endpoints</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Controls Toolbar -->
+      <section class="toolbar-section">
+        <!-- Filter Tabs -->
+        <div class="filter-pills" id="filter-pills-bar">
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="state.activeFilter() === 'ALL'"
+            (click)="state.activeFilter.set('ALL')"
+            id="filter-all"
+          >
+            All ({{ state.totalCount() }})
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="state.activeFilter() === 'UP'"
+            (click)="state.activeFilter.set('UP')"
+            id="filter-up"
+          >
+            Operational ({{ state.upCount() }})
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="state.activeFilter() === 'PENDING_DOWN'"
+            (click)="state.activeFilter.set('PENDING_DOWN')"
+            id="filter-pending"
+          >
+            Failing Debounce ({{ state.pendingCount() }})
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="state.activeFilter() === 'DOWN'"
+            (click)="state.activeFilter.set('DOWN')"
+            id="filter-down"
+          >
+            Down ({{ state.downCount() }})
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="state.activeFilter() === 'PAUSED'"
+            (click)="state.activeFilter.set('PAUSED')"
+            id="filter-paused"
+          >
+            Paused ({{ state.pausedCount() }})
+          </button>
+        </div>
+
+        <!-- Search Input -->
+        <div class="search-box">
+          <input
+            type="text"
+            id="input-search-targets"
+            class="form-input search-input"
+            placeholder="Search by name, URL, or protocol..."
+            [ngModel]="state.searchQuery()"
+            (ngModelChange)="state.searchQuery.set($event)"
+          />
+        </div>
+      </section>
+
+      <!-- Targets Table -->
+      <section class="table-section glass-panel">
+        @if (state.loading() && state.targets().length === 0) {
+          <div class="state-message" id="loading-spinner">
+            <div class="spinner"></div>
+            <span>Connecting to Sentinel probe worker...</span>
+          </div>
+        } @else if (state.filteredTargets().length === 0) {
+          <div class="state-message" id="empty-targets-message">
+            <span class="empty-icon">🛰️</span>
+            <h3>No monitored targets found</h3>
+            <p>Add your first HTTP/HTTPS endpoint, TCP service port, or ICMP host to begin monitoring.</p>
+            <button
+              type="button"
+              class="btn btn-primary"
+              id="btn-empty-add-target"
+              (click)="openAddModal()"
+            >
+              + Create First Target
+            </button>
+          </div>
+        } @else {
+          <div class="table-container">
+            <table class="targets-table" id="targets-table">
+              <thead>
+                <tr>
+                  <th style="width: 130px;">Status</th>
+                  <th>Service / Target</th>
+                  <th style="width: 140px;">24h Trend</th>
+                  <th style="width: 90px;">Uptime</th>
+                  <th style="width: 100px;">Latency</th>
+                  <th style="width: 90px;">Interval</th>
+                  <th style="width: 140px;">Last Checked</th>
+                  <th style="width: 150px; text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (target of state.filteredTargets(); track target.id) {
+                  <tr
+                    class="target-row"
+                    [id]="'target-row-' + target.id"
+                    (click)="openDetailModal(target)"
+                  >
+                    <!-- Status Badge -->
+                    <td>
+                      <app-status-badge
+                        [state]="target.current_state"
+                        [isActive]="target.is_active"
+                        [failures]="target.consecutive_failures"
+                        [threshold]="target.consecutive_failure_threshold"
+                      ></app-status-badge>
+                    </td>
+
+                    <!-- Target Info -->
+                    <td>
+                      <div class="target-identity">
+                        <span class="target-name">{{ target.name }}</span>
+                        <div class="target-meta">
+                          <span class="proto-badge" [attr.data-proto]="target.protocol">{{ target.protocol }}</span>
+                          <span class="target-endpoint font-mono">{{ target.host_or_url }}</span>
+                          @if (target.port) {
+                            <span class="target-port font-mono">:{{ target.port }}</span>
+                          }
+                        </div>
+                      </div>
+                    </td>
+
+                    <!-- Sparkline -->
+                    <td>
+                      <app-sparkline-chart
+                        [data]="target.recent_latencies"
+                        [state]="target.current_state"
+                      ></app-sparkline-chart>
+                    </td>
+
+                    <!-- 24h Uptime -->
+                    <td>
+                      <span
+                        class="uptime-pill"
+                        [class.uptime-good]="(target.uptime_percentage_24h ?? 100) >= 99"
+                        [class.uptime-fair]="(target.uptime_percentage_24h ?? 100) >= 95 && (target.uptime_percentage_24h ?? 100) < 99"
+                        [class.uptime-poor]="(target.uptime_percentage_24h ?? 100) < 95"
+                      >
+                        {{ target.uptime_percentage_24h ?? 100 }}%
+                      </span>
+                    </td>
+
+                    <!-- Latency -->
+                    <td>
+                      <span class="latency-cell font-mono">
+                        {{ target.avg_latency_24h_ms ? target.avg_latency_24h_ms + ' ms' : '—' }}
+                      </span>
+                    </td>
+
+                    <!-- Interval -->
+                    <td>
+                      <span class="interval-cell">{{ target.interval_seconds }}s</span>
+                    </td>
+
+                    <!-- Last Checked -->
+                    <td>
+                      <span class="time-cell font-mono">{{ formatRelativeTime(target.last_checked_at) }}</span>
+                    </td>
+
+                    <!-- Actions -->
+                    <td (click)="$event.stopPropagation()" style="text-align: right;">
+                      <div class="action-buttons">
+                        <!-- Check Now Button -->
+                        <button
+                          type="button"
+                          class="btn-icon"
+                          [id]="'btn-check-' + target.id"
+                          title="Execute Probe Immediately"
+                          (click)="onCheckNow(target.id)"
+                          [disabled]="isChecking(target.id)"
+                        >
+                          @if (isChecking(target.id)) {
+                            <span class="spinner-mini"></span>
+                          } @else {
+                            <span>🔄</span>
+                          }
+                        </button>
+
+                        <!-- Pause / Resume Button -->
+                        <button
+                          type="button"
+                          class="btn-icon"
+                          [id]="'btn-pause-' + target.id"
+                          [title]="target.is_active ? 'Pause Monitor' : 'Resume Monitor'"
+                          (click)="state.togglePause(target)"
+                        >
+                          <span>{{ target.is_active ? '⏸' : '▶' }}</span>
+                        </button>
+
+                        <!-- Edit Button -->
+                        <button
+                          type="button"
+                          class="btn-icon"
+                          [id]="'btn-edit-' + target.id"
+                          title="Edit Configuration"
+                          (click)="openEditModal(target)"
+                        >
+                          <span>✏️</span>
+                        </button>
+
+                        <!-- Delete Button -->
+                        <button
+                          type="button"
+                          class="btn-icon btn-icon-delete"
+                          [id]="'btn-delete-' + target.id"
+                          title="Delete Monitor"
+                          (click)="onDelete(target)"
+                        >
+                          <span>🗑️</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+
+      <!-- Target Form Modal (Create / Edit) -->
+      <app-target-form
+        [isOpen]="isTargetModalOpen()"
+        [targetToEdit]="selectedTargetForEdit()"
+        (close)="isTargetModalOpen.set(false)"
+        (saved)="onTargetSaved($event)"
+      ></app-target-form>
+
+      <!-- Operational Settings Modal -->
+      <app-settings-modal
+        [isOpen]="isSettingsModalOpen()"
+        (close)="isSettingsModalOpen.set(false)"
+      ></app-settings-modal>
+
+      <!-- Target Detail & Logs Modal -->
+      <app-target-detail-modal
+        [isOpen]="isDetailModalOpen()"
+        [target]="selectedTargetForDetail()"
+        (close)="isDetailModalOpen.set(false)"
+      ></app-target-detail-modal>
+    </div>
+  `,
+  styles: [`
+    .dashboard-layout {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px 32px 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Top Nav */
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      background: linear-gradient(135deg, #ffffff, #c7d2fe);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      display: block;
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .sync-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+      padding-right: 8px;
+    }
+    .sync-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: var(--success);
+      box-shadow: 0 0 6px var(--success-glow);
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+    }
+    .metric-card {
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 105px;
+    }
+    .metric-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .metric-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .metric-number {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.1;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+    .metric-number small.unit {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .metric-subtext {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      display: block;
+    }
+
+    /* Toolbar Section */
+    .toolbar-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .filter-pills {
+      display: flex;
+      gap: 8px;
+      background: rgba(17, 23, 38, 0.6);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+    }
+    .filter-pill {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .filter-pill:hover {
+      color: var(--text-primary);
+    }
+    .filter-pill.active {
+      background: var(--bg-elevated);
+      color: #ffffff;
+      box-shadow: var(--shadow-sm);
+    }
+    .search-box {
+      min-width: 300px;
+    }
+    .search-input {
+      padding: 8px 14px;
+      font-size: 13px;
+    }
+
+    /* Targets Table */
+    .table-section {
+      overflow: hidden;
+    }
+    .table-container {
+      overflow-x: auto;
+    }
+    .targets-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    .targets-table th {
+      background: rgba(10, 14, 25, 0.7);
+      padding: 12px 18px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .target-row {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+    .target-row:hover {
+      background: var(--bg-card-hover);
+    }
+    .target-row td {
+      padding: 14px 18px;
+      vertical-align: middle;
+      font-size: 13px;
+    }
+    .target-identity {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .target-name {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .target-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .proto-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+    .proto-badge[data-proto="TCP"] {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    .proto-badge[data-proto="ICMP"] {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+    .target-endpoint {
+      font-size: 11px;
+      color: var(--text-secondary);
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .target-port {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+    .uptime-pill {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .uptime-good {
+      color: #34d399;
+      background: var(--success-bg);
+    }
+    .uptime-fair {
+      color: #fbbf24;
+      background: var(--warning-bg);
+    }
+    .uptime-poor {
+      color: #f87171;
+      background: var(--danger-bg);
+    }
+    .latency-cell, .interval-cell, .time-cell {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .action-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+    .btn-icon-delete:hover {
+      color: #f87171;
+      background: var(--danger-bg);
+    }
+
+    /* States & Spinners */
+    .state-message {
+      text-align: center;
+      padding: 64px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-secondary);
+    }
+    .empty-icon {
+      font-size: 40px;
+      margin-bottom: 4px;
+    }
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .spinner-mini {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 1100px) {
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 650px) {
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+      .toolbar-section {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  `]
+})
+export class DashboardComponent implements OnInit, OnDestroy {
+  readonly state = inject(TargetStateService);
+
+  readonly isTargetModalOpen = signal<boolean>(false);
+  readonly selectedTargetForEdit = signal<Target | null>(null);
+
+  readonly isSettingsModalOpen = signal<boolean>(false);
+
+  readonly isDetailModalOpen = signal<boolean>(false);
+  readonly selectedTargetForDetail = signal<Target | null>(null);
+
+  ngOnInit(): void {
+    this.state.startAutoPolling(12000);
+  }
+
+  ngOnDestroy(): void {
+    this.state.stopAutoPolling();
+  }
+
+  isChecking(targetId: string): boolean {
+    return this.state.checkingTargetIds().has(targetId);
+  }
+
+  onCheckNow(targetId: string): void {
+    this.state.checkNow(targetId);
+  }
+
+  openAddModal(): void {
+    this.selectedTargetForEdit.set(null);
+    this.isTargetModalOpen.set(true);
+  }
+
+  openEditModal(target: Target): void {
+    this.selectedTargetForEdit.set(target);
+    this.isTargetModalOpen.set(true);
+  }
+
+  openDetailModal(target: Target): void {
+    this.selectedTargetForDetail.set(target);
+    this.isDetailModalOpen.set(true);
+  }
+
+  onTargetSaved(savedTarget: Target): void {
+    this.state.updateTargetInList(savedTarget);
+    // Reload list to ensure fresh metrics
+    this.state.loadTargets();
+  }
+
+  onDelete(target: Target): void {
+    if (confirm(`Are you sure you want to delete monitor '${target.name}'? Historical check logs will be permanently removed.`)) {
+      this.state.deleteTarget(target.id);
+    }
+  }
+
+  formatRelativeTime(isoStr?: string | null): string {
+    if (!isoStr) return 'Never';
+    const seconds = Math.floor((new Date().getTime() - new Date(isoStr).getTime()) / 1000);
+    if (seconds < 5) return 'just now';
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ago`;
+  }
+}
