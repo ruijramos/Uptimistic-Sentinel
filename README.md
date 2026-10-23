@@ -1,4 +1,4 @@
-# 🛰️ Uptimistic-Sentinel
+# 🛰️ Uptimistic Sentinel
 
 [![Architecture: Monolithic Micro-Worker](https://img.shields.io/badge/Architecture-Monolithic_Micro--Worker-6366f1.svg)](#system-architecture)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11+-3776ab.svg)](https://python.org)
