@@ -10,6 +10,10 @@
 
 A smart, self-hosted uptime monitor and alerting service engineered to run reliably on private internal networks. Designed specifically to eliminate **alert fatigue** through a deterministic debounce state machine and zero third-party commercial API lock-in.
 
+<p align="center">
+  <img src="docs/images/dashboard.png" alt="Uptimistic Sentinel Dashboard" width="100%">
+</p>
+
 ---
 
 ## ✨ Key Features
