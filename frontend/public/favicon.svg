@@ -1,0 +1,34 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sentinel_bg" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="sentinel_shield" x1="8" y1="6" x2="40" y2="42" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="60%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+    <linearGradient id="sentinel_pulse" x1="12" y1="24" x2="36" y2="24" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="45%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#34D399"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Obsidian Squircle Base -->
+  <rect width="48" height="48" rx="12" fill="url(#sentinel_bg)"/>
+  <rect x="0.75" y="0.75" width="46.5" height="46.5" rx="11.25" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1.5"/>
+  
+  <!-- Geometric Sentinel Shield -->
+  <path d="M24 7L38 12V22C38 30.5 32 37.5 24 41C16 37.5 10 30.5 10 22V12L24 7Z" 
+        fill="#6366F1" fill-opacity="0.08" 
+        stroke="url(#sentinel_shield)" stroke-width="2.5" stroke-linejoin="round"/>
+        
+  <!-- Uptime Heartbeat Waveform -->
+  <path d="M12 24H18L21 28L24.5 14L28 33L30.5 24H36" 
+        stroke="url(#sentinel_pulse)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"/>
+        
+  <!-- Emerald Sentinel Beacon -->
+  <circle cx="24.5" cy="14" r="2.2" fill="#34D399"/>
+</svg>

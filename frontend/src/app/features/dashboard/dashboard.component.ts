@@ -27,15 +27,31 @@ import { TargetDetailModalComponent } from '../target-detail/target-detail-modal
       <header class="top-nav glass-panel">
         <div class="nav-brand">
           <div class="brand-logo">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L3 7V13C3 18.5 7 21.6 12 22C17 21.6 21 18.5 21 13V7L12 2Z" fill="url(#brandGrad)" />
-              <path d="M9 12L11 14L15 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg width="34" height="34" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="brand-svg">
               <defs>
-                <linearGradient id="brandGrad" x1="3" y1="2" x2="21" y2="22" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#6366F1"/>
-                  <stop offset="1" stop-color="#4F46E5"/>
+                <linearGradient id="nav_bg" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#0F172A"/>
+                  <stop offset="100%" stop-color="#020617"/>
+                </linearGradient>
+                <linearGradient id="nav_shield" x1="8" y1="6" x2="40" y2="42" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#6366F1"/>
+                  <stop offset="60%" stop-color="#4F46E5"/>
+                  <stop offset="100%" stop-color="#06B6D4"/>
+                </linearGradient>
+                <linearGradient id="nav_pulse" x1="12" y1="24" x2="36" y2="24" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#06B6D4"/>
+                  <stop offset="45%" stop-color="#10B981"/>
+                  <stop offset="100%" stop-color="#34D399"/>
                 </linearGradient>
               </defs>
+              <rect width="48" height="48" rx="12" fill="url(#nav_bg)"/>
+              <rect x="0.75" y="0.75" width="46.5" height="46.5" rx="11.25" stroke="rgba(255, 255, 255, 0.14)" stroke-width="1.5"/>
+              <path d="M24 7L38 12V22C38 30.5 32 37.5 24 41C16 37.5 10 30.5 10 22V12L24 7Z" 
+                    fill="#6366F1" fill-opacity="0.1" 
+                    stroke="url(#nav_shield)" stroke-width="2.5" stroke-linejoin="round"/>
+              <path d="M12 24H18L21 28L24.5 14L28 33L30.5 24H36" 
+                    stroke="url(#nav_pulse)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="24.5" cy="14" r="2.2" fill="#34D399"/>
             </svg>
           </div>
           <div>
@@ -413,6 +429,22 @@ import { TargetDetailModalComponent } from '../target-detail/target-detail-modal
       display: flex;
       align-items: center;
       gap: 14px;
+    }
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .brand-svg {
+      display: block;
+      border-radius: 9px;
+      box-shadow: 0 0 16px rgba(99, 102, 241, 0.35);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+      cursor: pointer;
+    }
+    .brand-svg:hover {
+      transform: scale(1.08);
+      box-shadow: 0 0 22px rgba(16, 185, 129, 0.5);
     }
     .brand-title {
       font-size: 18px;
