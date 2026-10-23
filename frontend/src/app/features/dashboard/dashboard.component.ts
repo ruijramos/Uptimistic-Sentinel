@@ -602,9 +602,11 @@ import { TargetDetailModalComponent } from '../target-detail/target-detail-modal
     }
     .table-container {
       overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .targets-table {
       width: 100%;
+      min-width: 720px;
       border-collapse: collapse;
       text-align: left;
     }
@@ -743,18 +745,97 @@ import { TargetDetailModalComponent } from '../target-detail/target-detail-modal
       to { transform: rotate(360deg); }
     }
 
-    @media (max-width: 1100px) {
+    /* Responsive Breakpoints */
+    @media (max-width: 1200px) {
       .metrics-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
       }
     }
-    @media (max-width: 650px) {
+
+    @media (max-width: 900px) {
+      .dashboard-layout {
+        padding: 20px 20px 48px;
+        gap: 20px;
+      }
       .metrics-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .top-nav {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+        padding: 16px;
+      }
+      .nav-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        gap: 10px;
+      }
+      .nav-actions .btn {
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 12px;
       }
       .toolbar-section {
         flex-direction: column;
         align-items: stretch;
+        gap: 12px;
+      }
+      .filter-pills {
+        overflow-x: auto;
+        max-width: 100%;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      .filter-pills::-webkit-scrollbar {
+        display: none;
+      }
+      .filter-pill {
+        white-space: nowrap;
+        flex-shrink: 0;
+        padding: 6px 12px;
+        font-size: 11px;
+      }
+      .search-box {
+        width: 100%;
+        min-width: 0;
+      }
+      .search-input {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 540px) {
+      .dashboard-layout {
+        padding: 12px 12px 36px;
+        gap: 16px;
+      }
+      .metrics-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .metric-card {
+        padding: 14px 16px;
+        min-height: 85px;
+      }
+      .metric-number {
+        font-size: 22px;
+      }
+      .brand-title {
+        font-size: 16px;
+      }
+      .brand-subtitle {
+        font-size: 10px;
+      }
+      .sync-status span:last-child {
+        display: none;
       }
     }
 

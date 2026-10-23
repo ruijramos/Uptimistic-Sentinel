@@ -258,6 +258,33 @@ import { SystemSettings } from '../../core/models/settings.model';
       border: 1px solid var(--danger-border);
       color: #fca5a5;
     }
+    @media (max-width: 600px) {
+      .modal-body {
+        padding: 16px;
+      }
+      .modal-header {
+        padding: 16px;
+      }
+      .form-grid-2 {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+      .smtp-test-box {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+      .smtp-test-box .btn {
+        width: 100%;
+      }
+      .modal-footer {
+        flex-direction: column-reverse;
+        gap: 8px;
+      }
+      .modal-footer .btn {
+        width: 100%;
+      }
+    }
   `]
 })
 export class SettingsModalComponent implements OnInit, OnChanges {

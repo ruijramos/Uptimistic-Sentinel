@@ -312,6 +312,29 @@ import { Target, ProtocolType, TargetCreatePayload, TargetUpdatePayload } from '
       border: 1px solid var(--danger-border);
       color: #fca5a5;
     }
+    @media (max-width: 600px) {
+      .modal-body {
+        padding: 16px;
+      }
+      .modal-header {
+        padding: 16px;
+      }
+      .form-row {
+        flex-direction: column;
+        gap: 0;
+      }
+      .form-grid-3 {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+      .modal-footer {
+        flex-direction: column-reverse;
+        gap: 8px;
+      }
+      .modal-footer .btn {
+        width: 100%;
+      }
+    }
   `]
 })
 export class TargetFormComponent implements OnChanges {

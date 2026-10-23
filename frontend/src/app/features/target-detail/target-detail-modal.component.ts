@@ -316,6 +316,40 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
       color: var(--text-muted);
       font-size: 13px;
     }
+    @media (max-width: 640px) {
+      .modal-header {
+        padding: 16px;
+        position: relative;
+      }
+      .modal-header .close-btn {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+      }
+      .header-left {
+        gap: 10px;
+        max-width: calc(100% - 32px);
+      }
+      .stats-banner {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 12px 16px;
+        gap: 12px;
+      }
+      .tabs-bar {
+        padding: 0 16px;
+        gap: 16px;
+      }
+      .modal-body {
+        padding: 12px 16px 20px;
+        overflow-x: auto;
+      }
+      .data-table {
+        min-width: 480px;
+      }
+      .host-url {
+        max-width: 200px;
+      }
+    }
   `]
 })
 export class TargetDetailModalComponent implements OnChanges {
